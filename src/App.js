@@ -70,9 +70,9 @@ return"External Storage";
 return"Others";
 }
 
-// ✅ STATUS CLASSIFICATION
+// ✅ STATUS READER FRIENDLY
 function getStatus(remarks=""){
-const r=remarks.toLowerCase();
+const r=(remarks||"").toLowerCase();
 
 if(r.includes("unserviceable"))return"unserviceable";
 if(r.includes("defective"))return"defective";
@@ -80,7 +80,7 @@ if(r.includes("defective"))return"defective";
 return"serviceable";
 }
 
-// ✅ ARTICLE + DEVICE + STATUS
+// ✅ ARTICLE + DEVICE + STATUS BREAKDOWN
 const articleDeviceSummary=useMemo(()=>{
 
 const result={};
@@ -92,12 +92,12 @@ const type=getDeviceType(row["DESCRIPTION"]||"");
 const status=getStatus(row["Remarks"]||"");
 
 const unitValue=Number(row["Unit Value"])||0;
-
 const qty=
 Number(row["On Hand Per Count (Qty)"])||
 Number(row["Balance per Card (Qty)"])||0;
 
 if(!result[article])result[article]={};
+
 if(!result[article][type])
 result[article][type]={
 qty:0,
@@ -109,7 +109,6 @@ unserviceable:0
 
 result[article][type].qty+=qty;
 result[article][type].value+=unitValue*qty;
-
 result[article][type][status]+=qty;
 
 });
@@ -118,13 +117,13 @@ return result;
 
 },[data]);
 
-// ✅ TOTAL KPI
+// ✅ KPI TOTALS
 const totalValue=data.reduce((s,row)=>{
-const unitValue=Number(row["Unit Value"])||0;
+const uv=Number(row["Unit Value"])||0;
 const qty=
 Number(row["On Hand Per Count (Qty)"])||
 Number(row["Balance per Card (Qty)"])||0;
-return s+(unitValue*qty);
+return s+(uv*qty);
 },0);
 
 const totalQty=data.reduce((s,row)=>
@@ -142,7 +141,6 @@ return(
 
 <h1>AIS Inventory Dashboard</h1>
 
-{/* KPI CARDS */}
 <div style={grid}>
 <StatCard title="Total Inventory Value"
 value={`₱${totalValue.toLocaleString()}`}/>
@@ -152,7 +150,6 @@ value={Object.keys(articleDeviceSummary).length}/>
 value={totalQty}/>
 </div>
 
-{/* BREAKDOWN */}
 <h2 style={{marginTop:"30px"}}>
 Article Breakdown
 </h2>
@@ -187,7 +184,6 @@ unserviceable={val.unserviceable}
 ))
 }
 
-{/* SEARCH */}
 <input
 style={searchBox}
 placeholder="Search inventory..."
@@ -195,27 +191,25 @@ value={search}
 onChange={(e)=>setSearch(e.target.value)}
 />
 
-{/* TABLE */}
 <div style={{maxHeight:"70vh",overflow:"auto"}}>
 <table style={table}>
 <thead>
 <tr>
-{columns.map(c=>
+{columns.map(c=>(
 <th key={c} style={th}>{c}</th>
-)}
+))}
 </tr>
 </thead>
 
 <tbody>
 {filtered.map((row,i)=>(
 <tr key={i}>
-{columns.map(c=>
+{columns.map(c=>(
 <td key={c} style={td}>{row[c]??""}</td>
-)}
+))}
 </tr>
 ))}
 </tbody>
-
 </table>
 </div>
 
@@ -223,7 +217,6 @@ onChange={(e)=>setSearch(e.target.value)}
 );
 }
 
-/* KPI CARD */
 const StatCard=({title,value})=>(
 <div style={{
 background:"linear-gradient(135deg,#6366F1,#9333EA)",
@@ -233,15 +226,13 @@ borderRadius:"16px",
 boxShadow:"0 6px 16px rgba(0,0,0,.15)"
 }}>
 <div style={{fontSize:13}}>{title}</div>
-<div style={{fontSize:26,fontWeight:"bold"}}>
-{value}
-</div>
+<div style={{fontSize:26,fontWeight:"bold"}}>{value}</div>
 </div>
 );
 
-/* DEVICE BOX */
 const ICTCard=({title,qty,value,
 serviceable,defective,unserviceable})=>(
+
 <div style={{
 background:"linear-gradient(135deg,#6366F1,#9333EA)",
 color:"white",
@@ -250,19 +241,25 @@ borderRadius:"16px",
 boxShadow:"0 6px 16px rgba(0,0,0,.15)",
 minHeight:"150px"
 }}>
+
 <div style={{fontSize:"14px"}}>{title}</div>
 
 <div style={{fontSize:"22px",fontWeight:"bold"}}>
 {qty} Units
 </div>
+
 <div style={{fontSize:"14px"}}>
 ₱{value.toLocaleString()}
 </div>
 
-<div style={{marginTop:"6px",fontSize:"12px"}}>
-✅ {serviceable}
-⚠️ {defective}
-❌ {unserviceable}
+<div style={{marginTop:"8px",
+fontSize:"12px",
+lineHeight:"18px"}}>
+
+<div><b>Serviceable:</b> {serviceable}</div>
+<div><b>Needs Repair (Defective):</b> {defective}</div>
+<div><b>For Disposal (Unserviceable):</b> {unserviceable}</div>
+
 </div>
 
 </div>
@@ -277,7 +274,8 @@ marginBottom:24
 
 const ictGrid={
 display:"grid",
-gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",
+gridTemplateColumns:
+"repeat(auto-fit,minmax(220px,1fr))",
 gap:18,
 marginBottom:30
 };
