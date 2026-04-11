@@ -293,4 +293,3 @@ marginBottom:12
 };
 
 export default App;
-``
