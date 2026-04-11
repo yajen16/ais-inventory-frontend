@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-function App() {
+function App(){
 
 const [data,setData]=useState([]);
 const [search,setSearch]=useState("");
@@ -29,18 +29,19 @@ const columns=[
 
 const filtered=useMemo(()=>{
 return data.filter(row=>
-Object.values(row).join(" ").toLowerCase()
+Object.values(row).join(" ")
+.toLowerCase()
 .includes(search.toLowerCase())
 );
 },[data,search]);
 
+// ✅ DEVICE TYPE CLASSIFICATION
 function getDeviceType(desc=""){
 const d=desc.toLowerCase();
 
 if(d.includes("projector"))return"Projector";
 if(d.includes("smart tv"))return"Smart TV";
 if(d.includes("monitor"))return"Monitor";
-if(d.includes("tv"))return"TV";
 
 if(d.includes("laptop")||d.includes("notebook"))
 return"Laptop";
@@ -69,69 +70,89 @@ return"External Storage";
 return"Others";
 }
 
-const articleSummary=useMemo(()=>{
-const summary={};
-data.forEach(row=>{
-const article=row["Article"]||"Unspecified";
-const unitValue=Number(row["Unit Value"])||0;
-const qty=
-Number(row["On Hand Per Count (Qty)"])||
-Number(row["Balance per Card (Qty)"])||0;
+// ✅ STATUS CLASSIFICATION
+function getStatus(remarks=""){
+const r=remarks.toLowerCase();
 
-if(!summary[article])summary[article]={qty:0,value:0};
-summary[article].qty+=qty;
-summary[article].value+=unitValue*qty;
-});
-return summary;
-},[data]);
+if(r.includes("unserviceable"))return"unserviceable";
+if(r.includes("defective"))return"defective";
 
-// ✅ ALL ARTICLE DEVICE BREAKDOWN
+return"serviceable";
+}
+
+// ✅ ARTICLE + DEVICE + STATUS
 const articleDeviceSummary=useMemo(()=>{
+
 const result={};
 
 data.forEach(row=>{
+
 const article=row["Article"]||"Unspecified";
 const type=getDeviceType(row["DESCRIPTION"]||"");
+const status=getStatus(row["Remarks"]||"");
 
 const unitValue=Number(row["Unit Value"])||0;
+
 const qty=
 Number(row["On Hand Per Count (Qty)"])||
 Number(row["Balance per Card (Qty)"])||0;
 
 if(!result[article])result[article]={};
-
 if(!result[article][type])
-result[article][type]={qty:0,value:0};
+result[article][type]={
+qty:0,
+value:0,
+serviceable:0,
+defective:0,
+unserviceable:0
+};
 
 result[article][type].qty+=qty;
 result[article][type].value+=unitValue*qty;
+
+result[article][type][status]+=qty;
+
 });
 
 return result;
+
 },[data]);
 
-const totalValue=Object.values(articleSummary)
-.reduce((s,a)=>s+a.value,0);
+// ✅ TOTAL KPI
+const totalValue=data.reduce((s,row)=>{
+const unitValue=Number(row["Unit Value"])||0;
+const qty=
+Number(row["On Hand Per Count (Qty)"])||
+Number(row["Balance per Card (Qty)"])||0;
+return s+(unitValue*qty);
+},0);
 
-const totalQty=Object.values(articleSummary)
-.reduce((s,a)=>s+a.qty,0);
+const totalQty=data.reduce((s,row)=>
+s+
+(
+Number(row["On Hand Per Count (Qty)"])
+||
+Number(row["Balance per Card (Qty)"])
+||
+0
+),0);
 
 return(
 <div style={{padding:20,fontFamily:"Arial"}}>
 
 <h1>AIS Inventory Dashboard</h1>
 
-{/* KPI */}
+{/* KPI CARDS */}
 <div style={grid}>
 <StatCard title="Total Inventory Value"
 value={`₱${totalValue.toLocaleString()}`}/>
 <StatCard title="Total Articles"
-value={Object.keys(articleSummary).length}/>
+value={Object.keys(articleDeviceSummary).length}/>
 <StatCard title="Total Quantity"
 value={totalQty}/>
 </div>
 
-{/* ARTICLE BREAKDOWN */}
+{/* BREAKDOWN */}
 <h2 style={{marginTop:"30px"}}>
 Article Breakdown
 </h2>
@@ -139,6 +160,7 @@ Article Breakdown
 {
 Object.entries(articleDeviceSummary)
 .map(([article,devices])=>(
+
 <div key={article}>
 
 <h3 style={{marginTop:"25px"}}>{article}</h3>
@@ -153,6 +175,9 @@ key={type}
 title={type}
 qty={val.qty}
 value={val.value}
+serviceable={val.serviceable}
+defective={val.defective}
+unserviceable={val.unserviceable}
 />
 ))
 }
@@ -170,23 +195,23 @@ value={search}
 onChange={(e)=>setSearch(e.target.value)}
 />
 
-{/* INVENTORY TABLE */}
+{/* TABLE */}
 <div style={{maxHeight:"70vh",overflow:"auto"}}>
 <table style={table}>
 <thead>
 <tr>
-{columns.map(c=>(
+{columns.map(c=>
 <th key={c} style={th}>{c}</th>
-))}
+)}
 </tr>
 </thead>
 
 <tbody>
 {filtered.map((row,i)=>(
 <tr key={i}>
-{columns.map(c=>(
+{columns.map(c=>
 <td key={c} style={td}>{row[c]??""}</td>
-))}
+)}
 </tr>
 ))}
 </tbody>
@@ -195,7 +220,7 @@ onChange={(e)=>setSearch(e.target.value)}
 </div>
 
 </div>
-)
+);
 }
 
 /* KPI CARD */
@@ -207,46 +232,39 @@ padding:"18px",
 borderRadius:"16px",
 boxShadow:"0 6px 16px rgba(0,0,0,.15)"
 }}>
-<div style={{fontSize:13}}>
-{title}
-</div>
-<div style={{
-fontSize:26,
-fontWeight:"bold"
-}}>
+<div style={{fontSize:13}}>{title}</div>
+<div style={{fontSize:26,fontWeight:"bold"}}>
 {value}
 </div>
 </div>
 );
 
 /* DEVICE BOX */
-const ICTCard=({title,qty,value})=>(
+const ICTCard=({title,qty,value,
+serviceable,defective,unserviceable})=>(
 <div style={{
 background:"linear-gradient(135deg,#6366F1,#9333EA)",
 color:"white",
 padding:"18px",
 borderRadius:"16px",
 boxShadow:"0 6px 16px rgba(0,0,0,.15)",
-minHeight:"120px",
-display:"flex",
-flexDirection:"column",
-justifyContent:"space-between"
+minHeight:"150px"
 }}>
-<div style={{fontSize:"14px",opacity:0.9}}>
-{title}
-</div>
-<div>
-<div style={{
-fontSize:"22px",
-fontWeight:"bold"
-}}>
+<div style={{fontSize:"14px"}}>{title}</div>
+
+<div style={{fontSize:"22px",fontWeight:"bold"}}>
 {qty} Units
 </div>
-
 <div style={{fontSize:"14px"}}>
 ₱{value.toLocaleString()}
 </div>
+
+<div style={{marginTop:"6px",fontSize:"12px"}}>
+✅ {serviceable}
+⚠️ {defective}
+❌ {unserviceable}
 </div>
+
 </div>
 );
 
@@ -259,28 +277,14 @@ marginBottom:24
 
 const ictGrid={
 display:"grid",
-gridTemplateColumns:
-"repeat(auto-fit,minmax(220px,1fr))",
+gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",
 gap:18,
 marginBottom:30
 };
 
-const table={
-width:"100%",
-borderCollapse:"collapse",
-marginBottom:20
-};
-
-const th={
-border:"1px solid #999",
-padding:6,
-textAlign:"left"
-};
-
-const td={
-border:"1px solid #ccc",
-padding:6
-};
+const table={width:"100%",borderCollapse:"collapse"};
+const th={border:"1px solid #999",padding:6};
+const td={border:"1px solid #ccc",padding:6};
 
 const searchBox={
 padding:10,
@@ -289,3 +293,4 @@ marginBottom:12
 };
 
 export default App;
+``
