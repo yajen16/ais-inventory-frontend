@@ -37,7 +37,7 @@ function App() {
 
   const articleSummary = useMemo(() => {
     const summary = {};
-    data.forEach((row) => {
+    data.forEach(row => {
       const article = row["Article"] || "Unspecified";
       const unitValue = Number(row["Unit Value"]) || 0;
       const qty =
@@ -51,7 +51,6 @@ function App() {
     return summary;
   }, [data]);
 
-// ✅ ICT DEVICE CLASSIFICATION
 function getIctDeviceType(desc = "") {
   const d = desc.toLowerCase();
 
@@ -61,7 +60,6 @@ function getIctDeviceType(desc = "") {
   if (d.includes("tv")) return "TV";
 
   if (d.includes("laptop") || d.includes("notebook")) return "Laptop";
-
   if (
     d.includes("desktop") ||
     d.includes("cpu") ||
@@ -80,6 +78,9 @@ function getIctDeviceType(desc = "") {
   if (d.includes("router") || d.includes("switch"))
     return "Router / Network";
 
+  if (d.includes("hard drive") || d.includes("ssd"))
+    return "External Storage";
+
   return "Others";
 }
 
@@ -91,7 +92,7 @@ const ictSummary = useMemo(() => {
       (r) =>
         (r["Article"] || "").trim().toLowerCase() === "ict equipment"
     )
-    .forEach((row) => {
+    .forEach(row => {
       const type = getIctDeviceType(row["DESCRIPTION"] || "");
       const unitValue = Number(row["Unit Value"]) || 0;
       const qty =
@@ -124,23 +125,23 @@ const ictSummary = useMemo(() => {
         <StatCard title="Total Quantity" value={totalQty} />
       </div>
 
-{/* ✅ ICT BOX DASHBOARD */}
-<h2 style={{marginTop:"30px"}}>ICT Equipment Breakdown</h2>
+      {/* ICT DEVICE BOXES */}
+      <h2 style={{marginTop:"30px"}}>ICT Equipment Breakdown</h2>
 
-<div style={ictGrid}>
-{
-Object.entries(ictSummary)
-.sort((a,b)=>b[1].value-a[1].value)
-.map(([type,val])=>(
-<ICTCard
- key={type}
- title={type}
- qty={val.qty}
- value={val.value}
-/>
-))
-}
-</div>
+      <div style={ictGrid}>
+        {
+          Object.entries(ictSummary)
+          .sort((a,b)=>b[1].value-a[1].value)
+          .map(([type,val]) => (
+            <ICTCard
+              key={type}
+              title={type}
+              qty={val.qty}
+              value={val.value}
+            />
+          ))
+        }
+      </div>
 
       {/* SEARCH */}
       <input
@@ -150,7 +151,7 @@ Object.entries(ictSummary)
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {/* DETAILED TABLE */}
+      {/* INVENTORY TABLE */}
       <div style={{ maxHeight: "70vh", overflow: "auto" }}>
         <table style={table}>
           <thead>
@@ -191,7 +192,7 @@ boxShadow: "0 6px 16px rgba(0,0,0,.15)"
 </div>
 );
 
-/* ICT DEVICE CARD */
+/* ICT CARD */
 const ICTCard = ({title,qty,value})=>(
 <div style={{
 background:"linear-gradient(135deg,#6366F1,#9333EA)",
@@ -226,26 +227,17 @@ gap:16,
 marginBottom:24
 };
 
-const ictGrid = {
+const ictGrid={
 display:"grid",
 gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",
 gap:18,
 marginBottom:30
 };
 
-const table={
-width:"100%",
-borderCollapse:"collapse",
-marginBottom:20
-};
-
+const table={width:"100%",borderCollapse:"collapse",marginBottom:20};
 const th={border:"1px solid #999",padding:6,textAlign:"left"};
 const td={border:"1px solid #ccc",padding:6};
 
-const searchBox={
-padding:10,
-width:"100%",
-marginBottom:12
-};
+const searchBox={padding:10,width:"100%",marginBottom:12};
 
 export default App;
